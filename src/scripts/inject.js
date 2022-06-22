@@ -1,39 +1,36 @@
-window.postMessage(
-    {
-        source: "react-devtools-content-script",
-        payload: {
-            event: "syncSelectionFromNativeElementsPanel"
-        }
-    }
-);
-
-window.postMessage(
-    {
-        source: "react-devtools-content-script",
-        payload: {
-            event: "inspectElement",
+const connectToReacDevTools = () => {
+    console.log("connecting")
+    window.postMessage(
+        {
+            source: "react-devtools-content-script",
             payload: {
-                forceFullData: true,
-                id: 2,
-                path: null,
-                rendererID: 1
+                event: "syncSelectionFromNativeElementsPanel"
             }
         }
-    }
-);
+    );
+
+    window.postMessage(
+        {
+            source: "react-devtools-bridge",
+            payload: {
+                event: "selectFiber",
+                payload: 3
+            }
+        }
+
+    );
 
 
-
+}
 
 document.addEventListener('click', function (event) {
+    connectToReacDevTools();
     setTimeout(() => {
         let __reactFiber = findValueByPrefix(event.target, "__reactFiber")
         if (__reactFiber === null) {
             __reactFiber = findValueByPrefix(event.target, "__reactInternalInstance")
         }
-        if (__reactFiber == null) {
-            debugger;
-        }
+
         const data = {
             target: event.target.type,
             type: "click",
@@ -52,6 +49,7 @@ document.addEventListener('click', function (event) {
 
 // listen to keyborad events
 document.addEventListener('keydown', function (event) {
+    connectToReacDevTools();
     setTimeout(() => {
         let __reactFiber = findValueByPrefix(event.target, "__reactFiber")
         if (__reactFiber === null) {
@@ -84,6 +82,7 @@ const config = { attributes: true, childList: true, subtree: true };
 
 // Callback function to execute when mutations are observed
 const callback = (mutationsList) => {
+    connectToReacDevTools();
     setTimeout(() => {
         const data = [];
         for (const mutation of mutationsList) {
@@ -170,3 +169,4 @@ const findAllEvents = (object) => {
     return events;
 }
 
+setTimeout(() => connectToReacDevTools(), 1000)

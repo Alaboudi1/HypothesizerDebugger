@@ -72,7 +72,7 @@ const Timelines = ({ trace }: any) => {
     )
   }
   const getTimeLineContentAPI = (item: any, i) => {
-    if (item.startPosition.source.includes('src'))
+    if (item.startPosition.source?.includes('src'))
       return (
         <TimelineItem key={i}>
           {/* <TimelineOppositeContent sx={{ m: 'auto 0' }} align="right" variant="body2" color="text.secondary">
