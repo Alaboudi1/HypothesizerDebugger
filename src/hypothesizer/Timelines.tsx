@@ -14,7 +14,7 @@ import JavascriptOutlined from '@mui/icons-material/JavascriptOutlined'
 import Typography from '@mui/material/Typography'
 import './Timelines.css'
 const Timelines = ({ trace }: any) => {
-  console.log(trace);
+  console.log(trace)
   const [isRecording, setRecordingState] = React.useState<boolean>(false)
 
   const getType = (item: { type: any; coverage: any }) => {
@@ -72,8 +72,8 @@ const Timelines = ({ trace }: any) => {
       </TimelineItem>
     )
   }
-  const getTimeLineContentAPI = (item: any, i: any) => {
-    if (item.startPosition.source.includes('src'))
+  const getTimeLineContentAPI = (item: any, i) => {
+    if (item.startPosition.source?.includes('src'))
       return (
         <TimelineItem key={i}>
           {/* <TimelineOppositeContent sx={{ m: 'auto 0' }} align="right" variant="body2" color="text.secondary">
