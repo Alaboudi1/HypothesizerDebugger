@@ -1,11 +1,14 @@
-import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
+import { TraceMap, originalPositionFor, generatedPositionFor } from '@jridgewell/trace-mapping'
 
 const extractCoverageFromBundle = (rangeStart: number, rangeEnd: number, bundle: string) => {
-  const coverage = bundle.slice(rangeStart, rangeEnd).split(/\n/)
+  // const range = bundle.slice(rangeStart, rangeEnd).split(/\n/).join()
+  const lineBundleStart = bundle.substring(0, rangeStart).split(/\n/).length
+  const lineBundleEnd = bundle.substring(0, rangeEnd).split(/\n/).length
+
   return {
-    coverage,
-    lineBundleStart: bundle.substring(0, rangeStart).split(/\n/).length,
-    lineBundleEnd: bundle.substring(0, rangeEnd).split(/\n/).length,
+    lineBundleStart,
+    lineBundleEnd,
+    // range,
   }
 }
 
@@ -19,12 +22,28 @@ const CodeCoverageMetaData = (coverage: any, bundleMap: any, offSet: number) => 
     line: coverage.lineBundleEnd + offSet,
     column: 0,
   })
-
+  let accurateLine = endPosition.line == null ? -1 : endPosition.line
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const generated = generatedPositionFor(tracer, {
+      source: endPosition.source == null ? '' : endPosition.source,
+      line: accurateLine + 1,
+      column: endPosition.column == null ? 0 : endPosition.column,
+    })
+    if (generated.line != null) break
+    accurateLine++
+  }
+  endPosition.line = accurateLine
   return {
     ...coverage,
     startPosition,
     endPosition,
   }
+}
+
+const extractCodeCoverage = (rangeStart: number, range: number, files: any[], fileName: string) => {
+  const file = files.find((e: any) => new URL(e.url).pathname === fileName)
+  return file?.content.split(/\n/).splice(rangeStart - 1, range + 1)
 }
 
 export const getCoverage = (coverageRowData: any) => {
@@ -35,8 +54,15 @@ export const getCoverage = (coverageRowData: any) => {
     const { startOffset, endOffset } = e.ranges[0]
     const coverage = extractCoverageFromBundle(startOffset, endOffset, bundle)
     const codeCoverageMetaData = CodeCoverageMetaData(coverage, bundleMap, 0)
+    codeCoverageMetaData.coverage = extractCodeCoverage(
+      codeCoverageMetaData.startPosition.line,
+      codeCoverageMetaData.endPosition.line - codeCoverageMetaData.startPosition.line,
+      coverageRowData.allFiles,
+      codeCoverageMetaData.startPosition.source,
+    )
     return { ...codeCoverageMetaData, ...e }
   })
+
   const profile = coverageRowData.profile.map((e: any) => {
     const fileURL = new URL(e.callFrame.url).pathname.substring(1)
     const files = coverageRowData.bundleAndMap.find((bundle: any) => bundle[1].file === fileURL)
@@ -44,22 +70,15 @@ export const getCoverage = (coverageRowData: any) => {
     const lineBundleStart = e.callFrame.lineNumber
     const lineBundleEnd = e.callFrame.lineNumber
     const codeCoverageMetaData = CodeCoverageMetaData({ lineBundleStart, lineBundleEnd }, bundleMap, 1)
-    if (codeCoverageMetaData.startPosition.source !== null) return { ...codeCoverageMetaData, ...e }
-    else {
-      console.log('not found', e)
-      return undefined
-    }
+    codeCoverageMetaData.coverage = extractCodeCoverage(
+      codeCoverageMetaData.startPosition.line,
+      codeCoverageMetaData.endPosition.line - codeCoverageMetaData.startPosition.line,
+      coverageRowData.allFiles,
+      codeCoverageMetaData.startPosition.source,
+    )
+    return { ...codeCoverageMetaData, ...e }
   })
-  // TODO: verify the coverage information produced by the tace and the prfoile are the same
-  // TODO: Then concatenate the coverage information from the trace and the profile ( order is important )
-  console.log(
-    'trace',
-    trace.filter((e: any) => e.startPosition.source && e.startPosition.source.includes('src')),
-  )
-  console.log(
-    'profile',
-    profile.filter((e: any) => e.startPosition.source && e.startPosition.source.includes('src')),
-  )
+
   return addIdToTraceFromProfile(trace, profile)
 }
 const addIdToTraceFromProfile = (trace: any, profile: any) => {
