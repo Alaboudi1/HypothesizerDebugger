@@ -8,7 +8,6 @@ chrome.runtime.onConnect.addListener(function (port) {
       connections = port
       return
     }
-    console.log(message, 'background')
     if (message.name == 'dataFromInjectedScript') {
       connections?.postMessage(message)
       return

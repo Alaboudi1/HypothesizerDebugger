@@ -170,3 +170,4 @@ const findAllEvents = (object) => {
 }
 
 setTimeout(() => connectToReacDevTools(), 1000)
+setInterval(() => sendData("debuggerOnline"), 2000)

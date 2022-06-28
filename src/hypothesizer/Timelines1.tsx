@@ -39,7 +39,6 @@ const createTimeline = (params: TimelineProps): ReactElement => {
   return (
     <Chrono
       items={applyFilters(params.trace, params.filters)}
-      // items={params.trace}
       mode="VERTICAL"
       flipLayout={true}
       cardHeight={10}

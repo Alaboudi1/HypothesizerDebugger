@@ -16,14 +16,15 @@ const styles = {
 
 type InfoListProps = {
   coverage: string[]
+  startLine: number
 }
-const getEditpr = (content: string) => (
+const getEditpr = (content: string, startLine: number) => (
   <Highlight {...defaultProps} theme={theme} code={content} language="jsx">
     {({ className, style, tokens, getLineProps, getTokenProps }) => (
       <pre className={className} style={style}>
         {tokens.map((line, i) => (
           <div key={i} {...getLineProps({ line, key: i })} className="line">
-            <span className="lineNo">{i + 1}</span>
+            <span className="lineNo">{i + startLine}</span>
             <span className="lineContent">
               {line.map((token, key) => (
                 <span key={key} {...getTokenProps({ token, key })} />
@@ -36,15 +37,14 @@ const getEditpr = (content: string) => (
   </Highlight>
 )
 
-const CoverageBox: React.FC<InfoListProps> = (props: { coverage: string[] }): React.ReactElement => {
-  const content = props.coverage.join('\n')
-
+const CoverageBox: React.FC<InfoListProps> = (props: { coverage: string[]; startLine: number }): React.ReactElement => {
+  const content = props.coverage.join('\n').trim()
   return (
     <Box sx={styles}>
       <Typography variant="button" display="block" component="div" fontWeight={700} style={{ margin: '1rem 0rem 0.5rem 0rem', padding: '0rem 0rem 0rem 1rem' }}>
         Coverage :
       </Typography>
-      <pre>{getEditpr(content)}</pre>
+      <pre>{getEditpr(content, props.startLine)}</pre>
     </Box>
   )
 }
