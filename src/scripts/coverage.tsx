@@ -1,5 +1,11 @@
 import { TraceMap, originalPositionFor, generatedPositionFor } from '@jridgewell/trace-mapping'
 
+const convertPath = (windowsPath: string) =>
+  windowsPath
+    .replace(/^\\\\\?\\/, '')
+    .replace(/\\/g, '/')
+    .replace(/\/\/+/g, '/')
+
 const extractCoverageFromBundle = (rangeStart: number, rangeEnd: number, file: string) => {
   // const range = bundle.slice(rangeStart, rangeEnd).split(/\n/).join()
   const lineBundleStart = file.substring(0, rangeStart).split(/\n/).length
@@ -66,7 +72,7 @@ const CodeCoverageMetaData = (coverage: any, bundleMap: any, offSet: number) => 
 }
 
 const extractCodeCoverage = (rangeStart: number, range: number, files: any[], fileName: string) => {
-  const file = files.find((e: any) => new URL(e.url).pathname === fileName)
+  const file = files.find((e: any) => new URL(e.url).pathname.search(fileName) > -1)
   return file?.content.split(/\n/).splice(rangeStart - 1, range + 1)
 }
 const addIdToTraceFromProfile = (trace: any, profile: any) => {
@@ -134,6 +140,7 @@ const getCoverage = (coverageRowData: any, coverageEventsData: any) => {
     return { ...codeCoverageMetaData, ...e }
   })
   const events = coverageEventsData.map((e: any) => {
+    e.location.fileName = convertPath(e.location.fileName)
     const fileContent = extractCodeCoverage(-Infinity, Infinity, coverageRowData.allFiles, e.location.fileName)
     const coverage = extractCodeCoverageFromJSX(e.location.lineNumber, fileContent)
     return {
