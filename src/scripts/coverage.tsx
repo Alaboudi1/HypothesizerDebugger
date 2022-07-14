@@ -14,7 +14,6 @@ const extractCoverageFromBundle = (rangeStart: number, rangeEnd: number, file: s
   return {
     lineBundleStart,
     lineBundleEnd,
-    // range,
   }
 }
 
@@ -37,12 +36,15 @@ const CodeCoverageMetaData = (coverage: any, bundleMap: any, offSet: number) => 
     column: 0,
   })
   let accurateLine = startPosition.line == null ? -1 : startPosition.line
-
   // eslint-disable-next-line no-constant-condition
+  if (accurateLine <= 0) {
+    console.log('coverage not found', coverage)
+    return null
+  }
   while (true) {
     const generated = generatedPositionFor(tracer, {
       source: startPosition.source == null ? '' : startPosition.source,
-      line: accurateLine - 1,
+      line: accurateLine,
       column: startPosition.column == null ? 0 : startPosition.column,
     })
     if (generated.line != null) break
@@ -108,54 +110,65 @@ const devideCoverage = (coverage: any[]): any => {
 }
 
 const getCoverage = (coverageRowData: any, coverageEventsData: any) => {
-  const trace = coverageRowData.trace.map((e: any) => {
-    const fileURL = new URL(e.url).pathname.substring(1)
-    const files = coverageRowData.bundleAndMap.find((bundle: any) => bundle[1].file === fileURL)
-    const [bundle, bundleMap] = files
-    const { startOffset, endOffset } = e.ranges[0]
-    const coverage = extractCoverageFromBundle(startOffset, endOffset, bundle)
-    const codeCoverageMetaData = CodeCoverageMetaData(coverage, bundleMap, 0)
-    codeCoverageMetaData.coverage = extractCodeCoverage(
-      codeCoverageMetaData.startPosition.line,
-      codeCoverageMetaData.endPosition.line - codeCoverageMetaData.startPosition.line,
-      coverageRowData.allFiles,
-      codeCoverageMetaData.startPosition.source,
-    )
-    return { ...codeCoverageMetaData, ...e }
-  })
+  const trace = coverageRowData.trace
+    .map((e: any) => {
+      const fileURL = new URL(e.url).pathname.substring(1)
+      const files = coverageRowData.bundleAndMap.find((bundle: any) => bundle[1].file === fileURL)
+      const [bundle, bundleMap] = files
+      const { startOffset, endOffset } = e.ranges[0]
+      const coverage = extractCoverageFromBundle(startOffset, endOffset, bundle)
+      const codeCoverageMetaData = CodeCoverageMetaData(coverage, bundleMap, 0)
+      if (codeCoverageMetaData == null) return null
+      codeCoverageMetaData.coverage = extractCodeCoverage(
+        codeCoverageMetaData.startPosition.line,
+        codeCoverageMetaData.endPosition.line - codeCoverageMetaData.startPosition.line,
+        coverageRowData.allFiles,
+        codeCoverageMetaData.startPosition.source,
+      )
+      return { ...codeCoverageMetaData, ...e }
+    })
+    .filter((e: any) => e != null)
 
-  const profile = coverageRowData.profile.map((e: any) => {
-    const fileURL = new URL(e.callFrame.url).pathname.substring(1)
-    const files = coverageRowData.bundleAndMap.find((bundle: any) => bundle[1].file === fileURL)
-    const [bundle, bundleMap] = files
-    const lineBundleStart = e.callFrame.lineNumber
-    const lineBundleEnd = e.callFrame.lineNumber
-    const codeCoverageMetaData = CodeCoverageMetaData({ lineBundleStart, lineBundleEnd }, bundleMap, 1)
-    codeCoverageMetaData.coverage = extractCodeCoverage(
-      codeCoverageMetaData.startPosition.line,
-      codeCoverageMetaData.endPosition.line - codeCoverageMetaData.startPosition.line,
-      coverageRowData.allFiles,
-      codeCoverageMetaData.startPosition.source,
-    )
-    return { ...codeCoverageMetaData, ...e }
-  })
-  const events = coverageEventsData.map((e: any) => {
-    e.location.fileName = convertPath(e.location.fileName)
-    const fileContent = extractCodeCoverage(-Infinity, Infinity, coverageRowData.allFiles, e.location.fileName)
-    const coverage = extractCodeCoverageFromJSX(e.location.lineNumber, fileContent)
-    return {
-      coverage,
-      startPosition: {
-        line: e.location.lineNumber,
-        source: e.location.fileName,
-      },
-      endPosition: {
-        line: e.location.lineNumber + coverage.length - 1,
-        source: e.location.fileName,
-      },
-      ...e,
-    }
-  })
+  const profile = coverageRowData.profile
+    .map((e: any) => {
+      const fileURL = new URL(e.callFrame.url).pathname.substring(1)
+      const files = coverageRowData.bundleAndMap.find((bundle: any) => bundle[1].file === fileURL)
+      const [bundle, bundleMap] = files
+      const lineBundleStart = e.callFrame.lineNumber
+      const lineBundleEnd = e.callFrame.lineNumber
+      const codeCoverageMetaData = CodeCoverageMetaData({ lineBundleStart, lineBundleEnd }, bundleMap, 1)
+      if (codeCoverageMetaData == null) return null
+      codeCoverageMetaData.coverage = extractCodeCoverage(
+        codeCoverageMetaData.startPosition.line,
+        codeCoverageMetaData.endPosition.line - codeCoverageMetaData.startPosition.line,
+        coverageRowData.allFiles,
+        codeCoverageMetaData.startPosition.source,
+      )
+      return { ...codeCoverageMetaData, ...e }
+    })
+    .filter((e: any) => e != null)
+  const events = coverageEventsData
+    .map((e: any) => {
+      if (e.location === null) return null
+      e.location.fileName = convertPath(e.location.fileName)
+      const fileContent = extractCodeCoverage(-Infinity, Infinity, coverageRowData.allFiles, e.location.fileName)
+      const coverage = extractCodeCoverageFromJSX(e.location.lineNumber, fileContent)
+
+      return {
+        coverage,
+        startPosition: {
+          line: e.location.lineNumber,
+          source: e.location.fileName,
+        },
+        endPosition: {
+          line: e.location.lineNumber + coverage.length - 1,
+          source: e.location.fileName,
+        },
+        functionName: e.type,
+        ...e,
+      }
+    })
+    .filter((e: any) => e != null)
 
   const finalTrace = addIdToTraceFromProfile(trace, profile)
   const sortedCoverage = [...finalTrace, ...events].sort((a: any, b: any) => a.timestamp - b.timestamp)

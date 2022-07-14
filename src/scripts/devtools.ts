@@ -17,6 +17,7 @@ backgroundPageConnection.onMessage.addListener((message) => {
       }),
     )
   } else {
+    console.log('backgroundPageConnection.onMessage: ', message)
     window.dispatchEvent(
       new CustomEvent('traceCollected', {
         detail: message,

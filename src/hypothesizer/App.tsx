@@ -18,7 +18,6 @@ export const App = (): JSX.Element => {
   const connectionTimeOut = useRef<number>(0)
   useEffect(() => {
     window.addEventListener('debuggerOnline', () => {
-      console.log(connectionTimeOut.current, Date.now())
       if (connectionTimeOut.current > Date.now() || connectionTimeOut.current == 0) {
         setDebuggerStatus(true)
         connectionTimeOut.current = Date.now() + 3000

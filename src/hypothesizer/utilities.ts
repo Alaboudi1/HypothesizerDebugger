@@ -31,15 +31,6 @@ function splitTrace(data: (Event | Coverage)[][]): Trace {
 const transformTrace = (trace: Trace): HypoTimelineItem[] => {
   if ((trace.events === undefined && trace.coverage === undefined) || (trace.events.length === 0 && trace.coverage.length === 0)) return []
   const result: HypoTimelineItem[] = []
-  trace.events.forEach((event: Event) => {
-    result.push({
-      timestamp: `${event.timestamp}`,
-      title: `${event.location.fileName.split('/').pop()}`,
-      src: `${event.location.fileName.split('/').pop()}`,
-      cardSubtitle: `Event: ${event.type}`,
-      cardDetailedText: `${event.location.fileName} Ln ${event.location.lineNumber} Col ${event.location.columnNumber} \n Ln ${event.location.lineNumber} Col ${event.location.columnNumber}`,
-    })
-  })
   trace.coverage.forEach((cov: Coverage) => {
     result.push({
       timestamp: `${cov.timestamp}`,

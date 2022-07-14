@@ -1,5 +1,5 @@
+let contentScriptPort = chrome.runtime.connect({ name: "connectDevtoolsAndContentScript" });
 
-const contentScriptPort = chrome.runtime.connect({ name: "connectDevtoolsAndContentScript" });
 
 
 
@@ -17,13 +17,12 @@ injectCode(chrome.runtime.getURL('scripts/inject.js'));
 
 window.addEventListener('connectionBetweenInjectedScriptAndContentScript', (event) => {
     const data = JSON.parse(event.detail.data);
-    contentScriptPort.postMessage({ data, name: "dataFromInjectedScript" });
+    try {
+        contentScriptPort.postMessage({ data, name: "dataFromInjectedScript" });
+    } catch (e) {
+        console.log("reconnecting");
+        contentScriptPort = chrome.runtime.connect({ name: "connectDevtoolsAndContentScript" });
+    }
 
 });
 
-
-// window.addEventListener('DebuggerIsOnline', () => {
-//     console.log("DebuggerIsOnline");
-//     contentScriptPort.postMessage({ name: "DebuggerIsOnline" });
-
-// });
