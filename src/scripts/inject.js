@@ -1,5 +1,23 @@
-const connectToReacDevTools = () => {
+var connectToReacDevTools = () => {
     console.log("connecting")
+    window.postMessage(
+        {
+            source: "react-devtools-content-script",
+            payload: {
+                event: "setTraceUpdatesEnabled",
+                payload: true
+            }
+        }
+    );
+    window.postMessage(
+        {
+            source: "react-devtools-content-script",
+            payload: {
+                event: "NativeStyleEditor_measure",
+                payload: { id: 3, rendererID: 1 }
+            }
+        }
+    );
     window.postMessage(
         {
             source: "react-devtools-content-script",
@@ -20,69 +38,80 @@ const connectToReacDevTools = () => {
 
     );
 
-
+    if (window.$r == null) {
+        setTimeout(() => connectToReacDevTools(), 100);
+    }
 }
 
+window.addEventListener("message", (e) => {
+    if (e.data.payload.event === "inspectedElement" && e.data.payload.payload.type === "full-data") {
+        // sendState();
+    }
+})
 document.addEventListener('click', function (event) {
-    connectToReacDevTools();
-    setTimeout(() => {
-        let __reactFiber = findValueByPrefix(event.target, "__reactFiber")
-        if (__reactFiber === null) {
-            __reactFiber = findValueByPrefix(event.target, "__reactInternalInstance")
-        }
+    let __reactFiber = findValueByPrefix(event.target, "__reactFiber")
+    if (__reactFiber === null) {
+        __reactFiber = findValueByPrefix(event.target, "__reactInternalInstance")
+    }
+    if (__reactFiber == null) return;
+    const location = __reactFiber["_debugSource"] ?? __reactFiber["_debugOwner"]["_debugSource"] ?? null;
+    const data = {
+        target: event.target.type,
+        type: "click",
+        location,
+        srcElement: {
+            value: event.target.value,
+            tagName: event.target.tagName,
 
-        const data = {
-            target: event.target.type,
-            type: "click",
-            location: __reactFiber["_debugSource"],
-            srcElement: {
-                value: event.target.value,
-                tagName: event.target.tagName,
+        },
+        timestamp: Date.now()
+    }
+    sendData(data);
 
-            },
-            state: event.view.$r,
-            timestamp: Date.now()
-        }
-        sendData(data);
-    }, 0);
 });
+
+var sendState = () => {
+    const state = {
+        target: "state",
+        type: "state",
+        timestamp: Date.now(),
+        state: window.$r
+    }
+    sendData(state);
+}
 
 // listen to keyborad events
 document.addEventListener('keydown', function (event) {
-    connectToReacDevTools();
-    setTimeout(() => {
-        let __reactFiber = findValueByPrefix(event.target, "__reactFiber")
-        if (__reactFiber === null) {
-            __reactFiber = findValueByPrefix(event.target, "__reactInternalInstance")
-        }
-        const data = {
-            target: event.target.type,
-            type: "keydown",
-            key: event.key,
-            location: __reactFiber["_debugSource"],
-            srcElement: {
-                value: event.target.value,
-                tagName: event.target.tagName,
+    let __reactFiber = findValueByPrefix(event.target, "__reactFiber")
+    if (__reactFiber === null) {
+        __reactFiber = findValueByPrefix(event.target, "__reactInternalInstance")
+    }
+    if (__reactFiber == null) return;
+    const location = __reactFiber["_debugSource"] ?? __reactFiber["_debugOwner"]["_debugSource"] ?? null;
 
-            },
-            state: event.view.$r,
-            timestamp: Date.now()
+    const data = {
+        target: event.target.type,
+        type: "keydown",
+        key: event.key,
+        location,
+        srcElement: {
+            value: event.target.value,
+            tagName: event.target.tagName,
 
-        }
-        sendData(data);
-    }, 0);
+        },
+        timestamp: Date.now()
+
+    }
+    sendData(data);
 });
 
 
 
-const targetNode = document;
 
 // Options for the observer (which mutations to observe)
-const config = { attributes: true, childList: true, subtree: true };
 
 // Callback function to execute when mutations are observed
-const callback = (mutationsList) => {
-    connectToReacDevTools();
+var callback = (mutationsList) => {
     setTimeout(() => {
         const data = [];
         for (const mutation of mutationsList) {
@@ -112,6 +141,8 @@ const callback = (mutationsList) => {
 
 
             if (__reactFiber == null) continue;
+            const location = __reactFiber["_debugSource"] ?? __reactFiber["_debugOwner"]["_debugSource"] ?? null;
+
             data.push({
                 type: mutation.type,
                 addNode: addedNodes,
@@ -119,8 +150,7 @@ const callback = (mutationsList) => {
                 attributeName: mutation.attributeName,
                 value: mutation.target.value,
                 tagName: mutation.target.tagName,
-                location: __reactFiber["_debugSource"] ?? null,
-                state: window.$r,
+                location,
                 timestamp: Date.now()
             });
 
@@ -129,17 +159,11 @@ const callback = (mutationsList) => {
             sendData(data);
         }
     }, 100);
-
 };
 
-// Create an observer instance linked to the callback function
-const observer = new MutationObserver(callback);
+new MutationObserver(callback).observe(document, { attributes: true, childList: true, subtree: true });
 
-// Start observing the target node for configured mutations
-observer.observe(targetNode, config);
-
-const sendData = (data) => {
-    // console.log(data);
+var sendData = (data) => {
     window.dispatchEvent(new CustomEvent("connectionBetweenInjectedScriptAndContentScript", {
         detail: {
             data: JSON.stringify(data)
@@ -148,7 +172,7 @@ const sendData = (data) => {
     );
 }
 
-const findValueByPrefix = (object, prefix, callee) => {
+var findValueByPrefix = (object, prefix) => {
     for (var property in object) {
         if (property.startsWith(prefix)) {
             return object[property];
@@ -157,7 +181,7 @@ const findValueByPrefix = (object, prefix, callee) => {
     return null;
 }
 // function that iterato on all on... events and return a set of all event that is not null
-const findAllEvents = (object) => {
+var findAllEvents = (object) => {
     const events = [];
     for (var property in object) {
         if (property.startsWith("on")) {
@@ -170,3 +194,4 @@ const findAllEvents = (object) => {
 }
 
 setTimeout(() => connectToReacDevTools(), 1000)
+setInterval(() => sendData("debuggerOnline"), 2000)

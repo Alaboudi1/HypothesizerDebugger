@@ -8,7 +8,6 @@ chrome.runtime.onConnect.addListener(function (port) {
       connections = port
       return
     }
-    console.log(message, 'background')
     if (message.name == 'dataFromInjectedScript') {
       connections?.postMessage(message)
       return
@@ -23,4 +22,15 @@ chrome.runtime.onConnect.addListener(function (port) {
     port.onMessage.removeListener(extensionListener)
     connections = undefined
   })
+})
+
+chrome.runtime.onInstalled.addListener(async () => {
+  for (const cs of chrome.runtime.getManifest().content_scripts) {
+    for (const tab of await chrome.tabs.query({ url: cs.matches })) {
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: cs.js,
+      })
+    }
+  }
 })

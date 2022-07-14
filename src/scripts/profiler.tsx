@@ -3,29 +3,23 @@ type debuggingState = 'attach' | 'detach'
 const trace: any = []
 let incremnetalProfiler: any
 
-const getSourceCodeFiles = async (): Promise<any> => {
-  return new Promise((resolve, reject) =>
-    chrome.devtools.inspectedWindow.getResources((allFiles) => {
-      const files: any[] = []
-      try {
-        allFiles
-          .filter((file) => file.url.includes('localhost') && !file.url.includes('node_modules'))
-          .forEach((file) => {
-            file.getContent((content) => {
-              files.push({
-                url: file.url,
-                content,
-              })
-            })
-          })
-        console.log('files->', files)
-        return resolve(files)
-      } catch (e) {
-        return reject(Error('Cannot load files'))
-      }
+const getSourceCodeFiles = async (): Promise<any> =>
+  new Promise((resolve) =>
+    chrome.devtools.inspectedWindow.getResources(async (allFiles) => {
+      const files: chrome.devtools.inspectedWindow.Resource[] = allFiles.filter((file) => file.url.includes('localhost'))
+
+      const localFiles: any = files.map(
+        async (file) =>
+          new Promise((res) =>
+            file.getContent((content: string) => {
+              res({ url: file.url, content })
+            }),
+          ),
+      )
+      const result = await Promise.all(localFiles)
+      return resolve(result.filter((file) => file.content))
     }),
   )
-}
 
 /**
  * return an array that contain files of code inside src folder.
@@ -86,9 +80,10 @@ const endProfiler = async (): Promise<any> => {
       await sendDebuggerCommand('Debugger.disable')
       await debuggingLifeCycles('detach')
       const bundles = [...files.values()].map(({ sourceMap, url }) => fetchBundleAndBundleMap(url, sourceMap))
+
       const bundleAndMap = await Promise.all(bundles)
-      console.log('profile->', profile)
-      return resolve({ trace, profile, bundleAndMap })
+      const allFiles = await getSourceCodeFiles()
+      return resolve({ trace, profile, bundleAndMap, allFiles })
     }, 600),
   )
 }

@@ -1,0 +1,7 @@
+.timeline-drawing {
+    left: 10px;
+    height: 90vh;
+    width: 60vw;
+    border-left: 5px solid black;
+    height: 100%;
+}

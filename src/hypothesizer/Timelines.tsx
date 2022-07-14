@@ -14,6 +14,7 @@ import JavascriptOutlined from '@mui/icons-material/JavascriptOutlined'
 import Typography from '@mui/material/Typography'
 import './Timelines.css'
 const Timelines = ({ trace }: any) => {
+  console.log(trace)
   const [isRecording, setRecordingState] = React.useState<boolean>(false)
 
   const getType = (item: { type: any; coverage: any }) => {
@@ -86,7 +87,7 @@ const Timelines = ({ trace }: any) => {
           </TimelineSeparator>
           <TimelineContent sx={{ py: '10px', px: 2 }}>
             <Typography variant="h6" component="span">
-              {item.functionName || `Ananymous function`}
+              {item.functionName || `Anonymous function`}
             </Typography>
             <Typography>{item.startPosition.source.split('src/')[1]}</Typography>
             <Typography>{item.endPosition.line - item.startPosition.line > 0 ? `Line:(${item.startPosition.line}-${item.endPosition.line})` : `Line:(${item.startPosition.line})`}</Typography>
